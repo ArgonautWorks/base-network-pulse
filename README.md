@@ -20,7 +20,7 @@ The service initializes the payment facilitator on demand with bounded retries, 
 
 ## Price and settlement
 
-The route costs `$0.009` USDC on Base through x402. Free discovery lives at `/`, `/health`, `/openapi.json`, `/.well-known/x402`, and `/llms.txt`.
+The route costs `$0.009` USDC on Base through x402. Free discovery lives at `/`, `/health`, `/openapi.json`, `/.well-known/x402`, `/llms.txt`, `/.well-known/agent-card.json` (with `/.well-known/agent.json` as its legacy alias), and `POST /a2a`. The A2A 0.3 JSON-RPC endpoint accepts `message/send` and `SendMessage` and returns a completed purchase-discovery task only: it describes the paid pulse contract and its x402 price, without fetching telemetry, initiating a payment, or reflecting request content.
 
 A fifteen-minute Base monitor attributes confirmed external 9,000-atomic-unit direct payments and exact-offer 10,000-atomic-unit PayanAgent relay payments to product revenue. One-cent transfers require the matching public, confirmed, delivered marketplace receipt so they cannot collide with another ArgonautWorks product. Other amounts, ordinary transfers, self-payments, and duplicate transactions are excluded.
 
