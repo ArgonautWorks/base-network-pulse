@@ -32,7 +32,7 @@ test("publishes free discovery and a sub-cent paid pulse route", async () => {
       fetch(`${origin}/.well-known/x402`).then((response) => response.json()),
     ]);
     assert.equal(root.price, "$0.009");
-    assert.equal(health.version, "0.1.0");
+    assert.equal(health.version, "0.2.0");
     assert.equal(openapi.paths["/api/v1/pulse"].get.operationId, "getBaseNetworkPulse");
     assert.equal(manifest.resources.length, 2);
 
