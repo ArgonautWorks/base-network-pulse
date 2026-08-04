@@ -1,4 +1,5 @@
 import express from "express";
+import { randomUUID } from "node:crypto";
 import { HTTPFacilitatorClient } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { paymentMiddleware, x402ResourceServer } from "@x402/express";
@@ -10,7 +11,7 @@ const NETWORK = process.env.X402_NETWORK ?? "eip155:8453";
 const FACILITATOR_URL = process.env.X402_FACILITATOR_URL ?? "https://facilitator.payai.network";
 const PRICE = process.env.X402_PRICE ?? "$0.009";
 const PUBLIC_SOURCE = "https://github.com/ArgonautWorks/base-network-pulse";
-const SERVICE_VERSION = "0.2.1";
+const SERVICE_VERSION = "0.3.0";
 const SERVICE_DESCRIPTION = "Current Base mainnet block consensus, EIP-1559 fees, ETH/USD reference price, and deepest WETH-stablecoin DEX pool telemetry.";
 
 if (!/^0x[a-fA-F0-9]{40}$/.test(PAY_TO)) throw new Error("PAY_TO must be an EVM address");
@@ -130,6 +131,8 @@ export function createApp({
       settlement: { protocol: "x402", network: NETWORK, asset: "USDC" },
       health: "/health",
       openapi: "/openapi.json",
+      agent_card: "/.well-known/agent-card.json",
+      a2a: "/a2a",
       x402_manifest: "/.well-known/x402",
       source: PUBLIC_SOURCE,
     });
@@ -142,6 +145,80 @@ export function createApp({
       version: SERVICE_VERSION,
       network: NETWORK,
       facilitator: new URL(FACILITATOR_URL).hostname,
+    });
+  });
+
+  app.get(["/.well-known/agent.json", "/.well-known/agent-card.json"], (request, response) => {
+    const origin = `${request.protocol}://${request.get("host")}`;
+    const a2aUrl = `${origin}/a2a`;
+    response.json({
+      protocolVersion: "0.3",
+      name: "ArgonautWorks Base Network Pulse",
+      description: SERVICE_DESCRIPTION,
+      url: a2aUrl,
+      preferredTransport: "JSONRPC",
+      additionalInterfaces: [{ url: a2aUrl, transport: "JSONRPC" }],
+      version: SERVICE_VERSION,
+      provider: { organization: "ArgonautWorks", url: PUBLIC_SOURCE },
+      capabilities: { streaming: false, pushNotifications: false, stateTransitionHistory: false },
+      documentationUrl: `${origin}/openapi.json`,
+      defaultInputModes: ["text/plain", "application/json"],
+      defaultOutputModes: ["text/plain", "application/json"],
+      skills: [{
+        id: "base-network-pulse",
+        name: "Buy Base network pulse",
+        description: "Discover how to buy a current Base mainnet, fee, and market telemetry pulse through x402.",
+        tags: ["base", "network", "gas", "market-data", "x402"],
+        examples: ["How can I buy current Base network telemetry?"],
+      }],
+    });
+  });
+
+  app.post("/a2a", (request, response) => {
+    const body = request.body;
+    const requestId = body?.id ?? null;
+    if (!body || Array.isArray(body) || body.jsonrpc !== "2.0" || !["message/send", "SendMessage"].includes(body.method)) {
+      response.status(200).json({
+        jsonrpc: "2.0",
+        id: requestId,
+        error: {
+          code: body?.method ? -32601 : -32600,
+          message: body?.method ? "Method not found" : "Invalid Request",
+        },
+      });
+      return;
+    }
+
+    const origin = `${request.protocol}://${request.get("host")}`;
+    const incoming = body.params?.message;
+    const contextId = typeof incoming?.contextId === "string" ? incoming.contextId : randomUUID();
+    const taskId = typeof incoming?.taskId === "string" ? incoming.taskId : randomUUID();
+    response.json({
+      jsonrpc: "2.0",
+      id: requestId,
+      result: {
+        contextId,
+        history: [],
+        id: taskId,
+        kind: "task",
+        status: {
+          state: "completed",
+          timestamp: new Date().toISOString(),
+          message: {
+            kind: "message",
+            messageId: randomUUID(),
+            role: "agent",
+            parts: [{
+              kind: "text",
+              text: [
+                "ArgonautWorks Base Network Pulse is a paid current Base mainnet telemetry API.",
+                `Buy it by calling GET or POST ${origin}/api/v1/pulse and handling its x402 payment challenge.`,
+                `The price is ${PRICE} USDC on Base; read ${origin}/openapi.json and ${origin}/.well-known/x402 for the exact contract.`,
+              ].join(" "),
+            }],
+          },
+        },
+      },
     });
   });
 
@@ -182,6 +259,32 @@ export function createApp({
             },
           },
         },
+        "/a2a": {
+          post: {
+            operationId: "sendBaseNetworkPulseDiscoveryA2aMessage",
+            summary: "Return completed A2A discovery guidance for the paid pulse",
+            requestBody: {
+              required: true,
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["jsonrpc", "method"],
+                    properties: {
+                      jsonrpc: { type: "string", const: "2.0" },
+                      id: { type: ["string", "number", "null"] },
+                      method: { type: "string", enum: ["message/send", "SendMessage"] },
+                      params: { type: "object" },
+                    },
+                  },
+                },
+              },
+            },
+            responses: {
+              200: { description: "A completed A2A task with purchase discovery guidance; this route is free and does not make a payment or fetch telemetry." },
+            },
+          },
+        },
       },
     });
   });
@@ -215,6 +318,8 @@ export function createApp({
       "Output: block consensus, RPC responsiveness, gas and base fees, ETH/USD cross-source price, deepest Base WETH-stablecoin pool liquidity, volume, activity, and spread.",
       "Upstream failure returns 503 before a payment challenge.",
       "OpenAPI: /openapi.json",
+      "A2A agent card: /.well-known/agent-card.json (legacy alias: /.well-known/agent.json)",
+      "A2A JSON-RPC endpoint: POST /a2a (purchase discovery only; it does not fetch telemetry or settle payments)",
       "x402 manifest: /.well-known/x402",
       `Source: ${PUBLIC_SOURCE}`,
       "",
