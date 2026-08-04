@@ -8,7 +8,7 @@ import { loadBasePulse } from "./lib/base-pulse.mjs";
 const PAY_TO = process.env.PAY_TO ?? "0x5e2023b1D1366d6366E768fe432AD627bfAa5d57";
 const NETWORK = process.env.X402_NETWORK ?? "eip155:8453";
 const FACILITATOR_URL = process.env.X402_FACILITATOR_URL ?? "https://facilitator.payai.network";
-const PRICE = process.env.X402_PRICE ?? "$0.01";
+const PRICE = process.env.X402_PRICE ?? "$0.009";
 const PUBLIC_SOURCE = "https://github.com/ArgonautWorks/base-network-pulse";
 const SERVICE_VERSION = "0.1.0";
 const SERVICE_DESCRIPTION = "Current Base mainnet block consensus and EIP-1559 fee telemetry from independent RPC sources.";
@@ -99,7 +99,7 @@ export function createApp({ loadPulse = loadBasePulse } = {}) {
       operationId,
       summary: "Get a current Base network and fee pulse",
       "x-payment-info": {
-        price: { mode: "fixed", currency: "USD", amount: "0.01" },
+        price: { mode: "fixed", currency: "USD", amount: "0.009" },
         protocols: [{ x402: {} }],
       },
       responses: {
