@@ -1,6 +1,6 @@
 # Base Network Pulse
 
-A reliable sub-cent x402 API for current Base mainnet block consensus and EIP-1559 fee telemetry.
+A reliable sub-cent x402 API for current Base mainnet network, fee, ETH/USD, and DEX telemetry.
 
 Production: <https://argonaut-base-network-pulse.vercel.app>
 
@@ -13,8 +13,10 @@ The paid `GET` and `POST /api/v1/pulse` routes query two independent RPC sources
 - gas price, base fee, next base fee, and priority-fee percentiles
 - recent gas-used ratios
 - a 21,000-gas simple-transfer cost estimate in ETH
+- Coinbase ETH/USD spot and the deepest Base WETH-stablecoin DEX pool price
+- DEX liquidity, 24-hour volume, price change, buys, sells, and cross-source premium
 
-The service checks upstream availability before issuing the payment challenge. If every RPC source is unavailable and there is no recent cache, it returns `503` with `charged: false`.
+The service checks Base RPC availability before issuing the payment challenge. If every RPC source is unavailable and there is no recent cache, it returns `503` with `charged: false`. Coinbase and DEX Screener are independent market sources; partial market failure is marked degraded rather than hiding current network data.
 
 ## Price and settlement
 

@@ -3,15 +3,15 @@ import { HTTPFacilitatorClient } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { paymentMiddleware, x402ResourceServer } from "@x402/express";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
-import { loadBasePulse } from "./lib/base-pulse.mjs";
+import { loadFullPulse } from "./lib/full-pulse.mjs";
 
 const PAY_TO = process.env.PAY_TO ?? "0x5e2023b1D1366d6366E768fe432AD627bfAa5d57";
 const NETWORK = process.env.X402_NETWORK ?? "eip155:8453";
 const FACILITATOR_URL = process.env.X402_FACILITATOR_URL ?? "https://facilitator.payai.network";
 const PRICE = process.env.X402_PRICE ?? "$0.009";
 const PUBLIC_SOURCE = "https://github.com/ArgonautWorks/base-network-pulse";
-const SERVICE_VERSION = "0.1.0";
-const SERVICE_DESCRIPTION = "Current Base mainnet block consensus and EIP-1559 fee telemetry from independent RPC sources.";
+const SERVICE_VERSION = "0.2.0";
+const SERVICE_DESCRIPTION = "Current Base mainnet block consensus, EIP-1559 fees, ETH/USD reference price, and deepest WETH-stablecoin DEX pool telemetry.";
 
 if (!/^0x[a-fA-F0-9]{40}$/.test(PAY_TO)) throw new Error("PAY_TO must be an EVM address");
 
@@ -26,6 +26,11 @@ const outputExample = {
   consensus: { responsive_sources: 2, configured_sources: 2, block_spread: 0 },
   block: { number: 49_000_000 },
   fees: { gas_price_gwei: "0.006", priority_fee_gwei: "0.001" },
+  market: {
+    status: "healthy",
+    eth_usd: { coinbase_spot: "1869.16", base_dex: "1868.86", base_dex_premium_bps: -1.61 },
+    deepest_weth_stable_pool: { dex: "aerodrome", liquidity_usd: 9_500_000, volume_24h_usd: 44_000_000 },
+  },
 };
 const discovery = declareDiscoveryExtension({
   input: {},
@@ -44,11 +49,11 @@ const paidResource = {
   description: SERVICE_DESCRIPTION,
   mimeType: "application/json",
   serviceName: "ArgonautWorks Base Network Pulse",
-  tags: ["base", "gas", "block", "rpc", "network-telemetry"],
+  tags: ["base", "gas", "block", "rpc", "eth-price", "dex", "market-telemetry"],
   extensions: discovery,
 };
 
-export function createApp({ loadPulse = loadBasePulse } = {}) {
+export function createApp({ loadPulse = loadFullPulse } = {}) {
   const app = express();
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
@@ -97,7 +102,7 @@ export function createApp({ loadPulse = loadBasePulse } = {}) {
     const origin = `${request.protocol}://${request.get("host")}`;
     const operation = (operationId) => ({
       operationId,
-      summary: "Get a current Base network and fee pulse",
+      summary: "Get a current Base network, fee, ETH price, and DEX pulse",
       "x-payment-info": {
         price: { mode: "fixed", currency: "USD", amount: "0.009" },
         protocols: [{ x402: {} }],
@@ -159,7 +164,7 @@ export function createApp({ loadPulse = loadBasePulse } = {}) {
       "",
       "Paid endpoint: GET or POST /api/v1/pulse",
       `Price: ${PRICE} USDC on Base via x402 v2`,
-      "Output: block consensus, RPC responsiveness, gas price, base fee, priority fee percentiles, recent utilization, and a simple-transfer cost estimate.",
+      "Output: block consensus, RPC responsiveness, gas and base fees, ETH/USD cross-source price, deepest Base WETH-stablecoin pool liquidity, volume, activity, and spread.",
       "Upstream failure returns 503 before a payment challenge.",
       "OpenAPI: /openapi.json",
       "x402 manifest: /.well-known/x402",

@@ -15,10 +15,10 @@ async function persistState() {
 }
 
 const offerPayload = {
-  title: "Base Gas + Block Metrics — RPC consensus",
-  description: "Reliable live Base mainnet gas and block metrics from two independent RPC sources: block consensus, source latency, gas price, current and next base fee, priority-fee percentiles, recent utilization, and a simple-transfer cost estimate. Upstreams are checked before payment; total failure returns an uncharged 503.",
+  title: "Base ETH + Network Pulse — price, DEX, gas, blocks",
+  description: "Reliable live Base mainnet market and network telemetry: Coinbase ETH/USD, deepest Base WETH-stablecoin DEX pool price/liquidity/volume/activity, cross-source premium, block consensus, source latency, gas price, base fee, and priority-fee percentiles. Base RPCs are checked before payment; total network-source failure returns an uncharged 503.",
   category: "Blockchain",
-  tags: ["base", "gas", "block-metrics", "rpc-consensus", "live-data"],
+  tags: ["base", "eth-price", "dex", "gas", "block-metrics", "live-data"],
   // Keep relay settlements distinct from the existing one-cent product while
   // PayanAgent's live update API rejects its documented sub-cent metadata.
   priceCents: 2,
@@ -26,7 +26,7 @@ const offerPayload = {
   endpoint,
   httpMethod: "POST",
   inputSchema: "{}",
-  outputSchema: "{network, chain_id, observed_at, status, consensus, block, fees}",
+  outputSchema: "{network, chain_id, observed_at, status, consensus, block, fees, market:{status, eth_usd, deepest_weth_stable_pool, sources}}",
 };
 const existingOfferId = state.offers?.baseNetworkPulse?.offerId;
 if (existingOfferId) {
