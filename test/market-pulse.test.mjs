@@ -68,6 +68,17 @@ test("marks partial market-source failure degraded and total failure unavailable
   }), /rpc offline/);
 });
 
+test("rejects symbol-spoofed stablecoin pairs", async () => {
+  const spoofed = dexPair({ liquidity: 99_000_000 });
+  spoofed.quoteToken.address = "0x9999999999999999999999999999999999999999";
+  const pulse = await fetchMarketPulse({
+    fetchImpl: async (url) => String(url).includes("coinbase")
+      ? jsonResponse({ data: { amount: "2000", base: "ETH", currency: "USD" } })
+      : jsonResponse([spoofed, dexPair({ liquidity: 1_000_000 })]),
+  });
+  assert.equal(pulse.deepest_weth_stable_pool.liquidity_usd, 1_000_000);
+});
+
 test("serves a bounded stale market snapshot when refresh fails", async () => {
   let clock = 1_000;
   let calls = 0;
