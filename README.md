@@ -1,6 +1,6 @@
 # Base Network Pulse
 
-A reliable one-cent x402 API for current Base mainnet block consensus and EIP-1559 fee telemetry.
+A reliable sub-cent x402 API for current Base mainnet block consensus and EIP-1559 fee telemetry.
 
 Production: <https://argonaut-base-network-pulse.vercel.app>
 
@@ -18,7 +18,9 @@ The service checks upstream availability before issuing the payment challenge. I
 
 ## Price and settlement
 
-The route costs `$0.01` USDC on Base through x402. Free discovery lives at `/`, `/health`, `/openapi.json`, `/.well-known/x402`, and `/llms.txt`.
+The route costs `$0.009` USDC on Base through x402. Free discovery lives at `/`, `/health`, `/openapi.json`, `/.well-known/x402`, and `/llms.txt`.
+
+A fifteen-minute Base monitor attributes only confirmed external 9,000-atomic-unit EIP-3009 USDC transfers to product revenue. Other amounts, ordinary transfers, self-payments, and duplicate transactions are excluded.
 
 ## Local verification
 
@@ -33,4 +35,4 @@ Environment overrides:
 - `PAY_TO`: Base receiving address
 - `X402_NETWORK`: defaults to `eip155:8453`
 - `X402_FACILITATOR_URL`: defaults to PayAI
-- `X402_PRICE`: defaults to `$0.01`
+- `X402_PRICE`: defaults to `$0.009`

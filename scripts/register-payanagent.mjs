@@ -7,12 +7,19 @@ const endpoint = process.env.BASE_PULSE_ENDPOINT
   ?? "https://argonaut-base-network-pulse.vercel.app/api/v1/pulse";
 const state = JSON.parse(await readFile(statePath, "utf8"));
 if (!state.apiKey) throw new Error("PayanAgent state is missing apiKey");
+
+async function persistState() {
+  const temporary = path.join(path.dirname(statePath), `.${path.basename(statePath)}.${process.pid}.tmp`);
+  await writeFile(temporary, `${JSON.stringify(state, null, 2)}\n`, { mode: 0o600 });
+  await rename(temporary, statePath);
+}
+
 const offerPayload = {
   title: "Base Gas + Block Metrics — RPC consensus",
   description: "Reliable live Base mainnet gas and block metrics from two independent RPC sources: block consensus, source latency, gas price, current and next base fee, priority-fee percentiles, recent utilization, and a simple-transfer cost estimate. Upstreams are checked before payment; total failure returns an uncharged 503.",
   category: "Blockchain",
   tags: ["base", "gas", "block-metrics", "rpc-consensus", "live-data"],
-  priceCents: 1,
+  priceCents: 0,
   offerType: "api",
   endpoint,
   httpMethod: "POST",
@@ -32,10 +39,19 @@ if (existingOfferId) {
     signal: AbortSignal.timeout(30_000),
   });
   if (!response.ok) throw new Error(`PayanAgent offer update failed with HTTP ${response.status}`);
+  const body = await response.json();
+  const offer = body.offer ?? body;
+  state.offers.baseNetworkPulse = {
+    ...state.offers.baseNetworkPulse,
+    amountRaw: offer.amountRaw ?? "9000",
+    network: offer.network ?? "eip155:8453",
+  };
+  await persistState();
   console.log(JSON.stringify({
     synced: true,
     offer_id: existingOfferId,
     buy_url: state.offers.baseNetworkPulse.buyUrl,
+    amount_raw: state.offers.baseNetworkPulse.amountRaw,
   }));
   process.exit(0);
 }
@@ -59,12 +75,10 @@ state.offers ??= {};
 state.offers.baseNetworkPulse = {
   offerId,
   buyUrl: body.buyUrl ?? `https://payanagent.com/x402/${offerId}`,
-  amountRaw: body.amountRaw ?? "10000",
+  amountRaw: body.amountRaw ?? "9000",
   network: body.network ?? "eip155:8453",
 };
-const temporary = path.join(path.dirname(statePath), `.${path.basename(statePath)}.${process.pid}.tmp`);
-await writeFile(temporary, `${JSON.stringify(state, null, 2)}\n`, { mode: 0o600 });
-await rename(temporary, statePath);
+await persistState();
 
 console.log(JSON.stringify({
   offer_id: offerId,

@@ -23,7 +23,7 @@ async function withServer(app, run) {
   }
 }
 
-test("publishes free discovery and a one-cent paid pulse route", async () => {
+test("publishes free discovery and a sub-cent paid pulse route", async () => {
   await withServer(createApp({ loadPulse: async () => SAMPLE }), async (origin) => {
     const [root, health, openapi, manifest] = await Promise.all([
       fetch(origin).then((response) => response.json()),
@@ -31,7 +31,7 @@ test("publishes free discovery and a one-cent paid pulse route", async () => {
       fetch(`${origin}/openapi.json`).then((response) => response.json()),
       fetch(`${origin}/.well-known/x402`).then((response) => response.json()),
     ]);
-    assert.equal(root.price, "$0.01");
+    assert.equal(root.price, "$0.009");
     assert.equal(health.version, "0.1.0");
     assert.equal(openapi.paths["/api/v1/pulse"].get.operationId, "getBaseNetworkPulse");
     assert.equal(manifest.resources.length, 2);
@@ -44,7 +44,7 @@ test("publishes free discovery and a one-cent paid pulse route", async () => {
     assert.equal(response.status, 402);
     const challenge = JSON.parse(Buffer.from(response.headers.get("payment-required"), "base64").toString("utf8"));
     assert.equal(challenge.x402Version, 2);
-    assert.equal(challenge.accepts[0].amount, "10000");
+    assert.equal(challenge.accepts[0].amount, "9000");
   });
 });
 
