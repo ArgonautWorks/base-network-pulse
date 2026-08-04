@@ -10,7 +10,7 @@ const NETWORK = process.env.X402_NETWORK ?? "eip155:8453";
 const FACILITATOR_URL = process.env.X402_FACILITATOR_URL ?? "https://facilitator.payai.network";
 const PRICE = process.env.X402_PRICE ?? "$0.009";
 const PUBLIC_SOURCE = "https://github.com/ArgonautWorks/base-network-pulse";
-const SERVICE_VERSION = "0.2.0";
+const SERVICE_VERSION = "0.2.1";
 const SERVICE_DESCRIPTION = "Current Base mainnet block consensus, EIP-1559 fees, ETH/USD reference price, and deepest WETH-stablecoin DEX pool telemetry.";
 
 if (!/^0x[a-fA-F0-9]{40}$/.test(PAY_TO)) throw new Error("PAY_TO must be an EVM address");
@@ -53,14 +53,61 @@ const paidResource = {
   extensions: discovery,
 };
 
-export function createApp({ loadPulse = loadFullPulse } = {}) {
+export function createRetriableInitializer(initialize, { maxAttempts = 3, retryDelayMs = 100 } = {}) {
+  let initialized = false;
+  let inFlight = null;
+
+  return async function ensureInitialized() {
+    if (initialized) return;
+    if (!inFlight) {
+      inFlight = (async () => {
+        let lastError;
+        for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+          try {
+            await initialize();
+            initialized = true;
+            return;
+          } catch (error) {
+            lastError = error;
+            if (attempt < maxAttempts && retryDelayMs > 0) {
+              await new Promise((resolve) => setTimeout(resolve, retryDelayMs * attempt));
+            }
+          }
+        }
+        throw lastError;
+      })();
+    }
+
+    try {
+      await inFlight;
+    } finally {
+      if (!initialized) inFlight = null;
+    }
+  };
+}
+
+export function createApp({
+  loadPulse = loadFullPulse,
+  initializeFacilitator = () => resourceServer.initialize(),
+  facilitatorInitOptions,
+} = {}) {
   const app = express();
+  const ensureFacilitatorInitialized = createRetriableInitializer(
+    initializeFacilitator,
+    facilitatorInitOptions,
+  );
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
   app.use(express.json({ limit: "2kb" }));
 
   app.use("/api/v1/pulse", async (request, response, next) => {
     if (!["GET", "POST"].includes(request.method)) return next();
+    try {
+      await ensureFacilitatorInitialized();
+    } catch {
+      response.set("Retry-After", "1");
+      return response.status(502).json({ error: "payment_facilitator_unavailable", charged: false });
+    }
     try {
       request.basePulse = await loadPulse();
       return next();
@@ -72,7 +119,7 @@ export function createApp({ loadPulse = loadFullPulse } = {}) {
   app.use(paymentMiddleware({
     "GET /api/v1/pulse": paidResource,
     "POST /api/v1/pulse": { ...paidResource, extensions: postDiscovery },
-  }, resourceServer));
+  }, resourceServer, undefined, undefined, false));
 
   app.get("/", (_request, response) => {
     response.json({
@@ -110,6 +157,7 @@ export function createApp({ loadPulse = loadFullPulse } = {}) {
       responses: {
         200: { description: "Base network pulse" },
         402: { description: "x402 Base-USDC payment challenge" },
+        502: { description: "Payment facilitator temporarily unavailable; no payment challenge issued" },
         503: { description: "All upstream RPC sources unavailable; no payment challenge issued" },
       },
     });

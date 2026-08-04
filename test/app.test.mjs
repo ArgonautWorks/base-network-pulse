@@ -32,7 +32,7 @@ test("publishes free discovery and a sub-cent paid pulse route", async () => {
       fetch(`${origin}/.well-known/x402`).then((response) => response.json()),
     ]);
     assert.equal(root.price, "$0.009");
-    assert.equal(health.version, "0.2.0");
+    assert.equal(health.version, "0.2.1");
     assert.equal(openapi.paths["/api/v1/pulse"].get.operationId, "getBaseNetworkPulse");
     assert.equal(manifest.resources.length, 2);
 
@@ -54,5 +54,26 @@ test("returns an uncharged 503 before payment when every RPC source fails", asyn
     assert.equal(response.status, 503);
     assert.equal(response.headers.get("payment-required"), null);
     assert.deepEqual(await response.json(), { error: "base_rpc_unavailable", charged: false });
+  });
+});
+
+test("retries facilitator initialization and fails without charging", async () => {
+  let attempts = 0;
+  const app = createApp({
+    loadPulse: async () => SAMPLE,
+    initializeFacilitator: async () => {
+      attempts += 1;
+      throw new Error("facilitator offline");
+    },
+    facilitatorInitOptions: { maxAttempts: 3, retryDelayMs: 0 },
+  });
+
+  await withServer(app, async (origin) => {
+    const response = await fetch(`${origin}/api/v1/pulse`);
+    assert.equal(response.status, 502);
+    assert.equal(response.headers.get("payment-required"), null);
+    assert.equal(response.headers.get("retry-after"), "1");
+    assert.deepEqual(await response.json(), { error: "payment_facilitator_unavailable", charged: false });
+    assert.equal(attempts, 3);
   });
 });

@@ -16,7 +16,7 @@ The paid `GET` and `POST /api/v1/pulse` routes query two independent RPC sources
 - Coinbase ETH/USD spot and the deepest Base WETH-stablecoin DEX pool price
 - DEX liquidity, 24-hour volume, price change, buys, sells, and cross-source premium
 
-The service checks Base RPC availability before issuing the payment challenge. If every RPC source is unavailable and there is no recent cache, it returns `503` with `charged: false`. Coinbase and DEX Screener are independent market sources; partial market failure is marked degraded rather than hiding current network data.
+The service initializes the payment facilitator on demand with bounded retries, then checks Base RPC availability before issuing the payment challenge. A facilitator outage returns `502`; total RPC failure without a recent cache returns `503`. Both responses include `charged: false`. Coinbase and DEX Screener are independent market sources; partial market failure is marked degraded rather than hiding current network data.
 
 ## Price and settlement
 
