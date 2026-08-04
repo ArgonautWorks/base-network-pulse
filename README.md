@@ -2,6 +2,10 @@
 
 A reliable one-cent x402 API for current Base mainnet block consensus and EIP-1559 fee telemetry.
 
+Production: <https://argonaut-base-network-pulse.vercel.app>
+
+Buy through PayanAgent: <https://payanagent.com/x402/kh70xt1w9y755zse4ersz2xfkh8bvkqr>
+
 The paid `GET` and `POST /api/v1/pulse` routes query two independent RPC sources and return:
 
 - current block number and cross-source block spread
