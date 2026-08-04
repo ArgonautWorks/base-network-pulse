@@ -2,8 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   BASE_USDC,
+  PAYAN_AGENT_ID,
   TRANSFER_TOPIC,
   classifyBasePulseTransfer,
+  qualifyingPayanRelayReceipt,
   revenueLedgerRow,
 } from "../lib/revenue-monitor.mjs";
 
@@ -16,6 +18,7 @@ const LEDGER_FILE = process.env.BASE_PULSE_LEDGER
   ?? "/home/oak/argonaut-ventures/venture-lab-frantic-monitor/ledger.csv";
 const CONFIRMATIONS = 20;
 const INITIAL_LOOKBACK_BLOCKS = 2_000;
+const PAYAN_RECEIPTS_URL = `https://payanagent.com/api/v1/agents/${PAYAN_AGENT_ID}/receipts?side=seller&limit=100`;
 
 function readJson(file) {
   try {
@@ -47,6 +50,19 @@ async function rpc(method, params) {
   return value.result;
 }
 
+async function payanRelayTransactions() {
+  const response = await fetch(PAYAN_RECEIPTS_URL, {
+    headers: { Accept: "application/json", "User-Agent": "ArgonautWorks/base-network-pulse-revenue" },
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) throw new Error(`PayanAgent returned HTTP ${response.status}`);
+  const body = await response.json();
+  if (!Array.isArray(body.receipts)) throw new Error("PayanAgent returned an invalid receipt feed");
+  return new Set(body.receipts
+    .filter(qualifyingPayanRelayReceipt)
+    .map((receipt) => receipt.txHash.toLowerCase()));
+}
+
 function hexBlock(value) {
   return `0x${value.toString(16)}`;
 }
@@ -57,6 +73,7 @@ async function main() {
   if (!/^0x[a-fA-F0-9]{40}$/.test(receivingWallet)) throw new Error("invalid receiving wallet");
 
   const prior = readJson(STATE_FILE) ?? { receipts: [] };
+  const verifiedPayanTransactions = await payanRelayTransactions();
   const currentBlock = Number.parseInt(await rpc("eth_blockNumber", []), 16);
   const confirmedBlock = currentBlock - CONFIRMATIONS;
   const fromBlock = Number.isInteger(prior.last_scanned_block)
@@ -81,7 +98,7 @@ async function main() {
   for (const log of logs) {
     if (priorTransactions.has(log.transactionHash) || ledger.includes(log.transactionHash)) continue;
     const transaction = await rpc("eth_getTransactionByHash", [log.transactionHash]);
-    const receipt = classifyBasePulseTransfer(log, transaction, receivingWallet);
+    const receipt = classifyBasePulseTransfer(log, transaction, receivingWallet, { verifiedPayanTransactions });
     if (!receipt) continue;
     fs.appendFileSync(LEDGER_FILE, `${revenueLedgerRow(receipt)}\n`, "utf8");
     receipts.push({ ...receipt, recorded_at: new Date().toISOString() });
@@ -93,13 +110,14 @@ async function main() {
     updated_at: new Date().toISOString(),
     last_scanned_block: confirmedBlock,
     confirmations: CONFIRMATIONS,
+    verified_payan_transactions: verifiedPayanTransactions.size,
     receipts: allReceipts,
     realized_revenue_usd: allReceipts.reduce(
       (total, receipt) => total + Number(receipt.revenue_usd ?? 0),
       0,
     ),
   });
-  console.log(`Scanned ${logs.length} incoming USDC transfer(s); recorded ${receipts.length} paid API call(s)`);
+  console.log(`Scanned ${logs.length} incoming USDC transfer(s) with ${verifiedPayanTransactions.size} verified PayanAgent relay receipt(s); recorded ${receipts.length} paid API call(s)`);
 }
 
 main().catch((error) => {
