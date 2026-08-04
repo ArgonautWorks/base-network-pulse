@@ -19,7 +19,9 @@ const offerPayload = {
   description: "Reliable live Base mainnet gas and block metrics from two independent RPC sources: block consensus, source latency, gas price, current and next base fee, priority-fee percentiles, recent utilization, and a simple-transfer cost estimate. Upstreams are checked before payment; total failure returns an uncharged 503.",
   category: "Blockchain",
   tags: ["base", "gas", "block-metrics", "rpc-consensus", "live-data"],
-  priceCents: 0,
+  // PayanAgent validates this metadata at whole-cent precision, then probes the
+  // endpoint and uses its authoritative 9,000-atomic-unit x402 challenge.
+  priceCents: 1,
   offerType: "api",
   endpoint,
   httpMethod: "POST",
