@@ -33,9 +33,27 @@ const paidTransaction = {
 
 test("classifies a confirmed external 9,000-atomic-unit EIP-3009 transfer", () => {
   assert.deepEqual(classifyBasePulseTransfer(paidLog(), paidTransaction, WALLET), {
+    channel: "direct",
+    revenue_usd: 0.009,
     transaction: "0xabc123",
     payer: PAYER,
     amount_usdc_atomic: "9000",
+    block_number: 49528401,
+  });
+});
+
+test("classifies the distinct two-cent PayanAgent relay transfer", () => {
+  const receipt = classifyBasePulseTransfer(
+    paidLog({ data: "0x4e20", transactionHash: "0xrelay" }),
+    paidTransaction,
+    WALLET,
+  );
+  assert.deepEqual(receipt, {
+    channel: "payanagent",
+    revenue_usd: 0.02,
+    transaction: "0xrelay",
+    payer: PAYER,
+    amount_usdc_atomic: "20000",
     block_number: 49528401,
   });
 });
@@ -56,6 +74,6 @@ test("formats exact sub-cent realized revenue without rounding", () => {
   assert.equal(ledgerDate(date), "2026-08-05");
   assert.equal(
     revenueLedgerRow(receipt, date),
-    "2026-08-05,E044,api_revenue,0.00,0.009,0.009,Settled external x402 Base network pulse; Base transaction 0xabc123; payer 0x1111111111111111111111111111111111111111",
+    "2026-08-05,E044,api_revenue,0.00,0.009,0.009,Settled external x402 Base network pulse via direct; Base transaction 0xabc123; payer 0x1111111111111111111111111111111111111111",
   );
 });

@@ -94,7 +94,10 @@ async function main() {
     last_scanned_block: confirmedBlock,
     confirmations: CONFIRMATIONS,
     receipts: allReceipts,
-    realized_revenue_usd: allReceipts.length * 0.009,
+    realized_revenue_usd: allReceipts.reduce(
+      (total, receipt) => total + Number(receipt.revenue_usd ?? 0),
+      0,
+    ),
   });
   console.log(`Scanned ${logs.length} incoming USDC transfer(s); recorded ${receipts.length} paid API call(s)`);
 }

@@ -19,9 +19,9 @@ const offerPayload = {
   description: "Reliable live Base mainnet gas and block metrics from two independent RPC sources: block consensus, source latency, gas price, current and next base fee, priority-fee percentiles, recent utilization, and a simple-transfer cost estimate. Upstreams are checked before payment; total failure returns an uncharged 503.",
   category: "Blockchain",
   tags: ["base", "gas", "block-metrics", "rpc-consensus", "live-data"],
-  // PayanAgent validates this metadata at whole-cent precision, then probes the
-  // endpoint and uses its authoritative 9,000-atomic-unit x402 challenge.
-  priceCents: 1,
+  // Keep relay settlements distinct from the existing one-cent product while
+  // PayanAgent's live update API rejects its documented sub-cent metadata.
+  priceCents: 2,
   offerType: "api",
   endpoint,
   httpMethod: "POST",
@@ -45,7 +45,7 @@ if (existingOfferId) {
   const offer = body.offer ?? body;
   state.offers.baseNetworkPulse = {
     ...state.offers.baseNetworkPulse,
-    amountRaw: offer.amountRaw ?? "9000",
+    amountRaw: offer.amountRaw ?? "20000",
     network: offer.network ?? "eip155:8453",
   };
   await persistState();
@@ -77,7 +77,7 @@ state.offers ??= {};
 state.offers.baseNetworkPulse = {
   offerId,
   buyUrl: body.buyUrl ?? `https://payanagent.com/x402/${offerId}`,
-  amountRaw: body.amountRaw ?? "9000",
+  amountRaw: body.amountRaw ?? "20000",
   network: body.network ?? "eip155:8453",
 };
 await persistState();
