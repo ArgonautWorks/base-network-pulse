@@ -4,7 +4,7 @@ A reliable sub-cent x402 API for current Base mainnet network, fee, ETH/USD, and
 
 Production: <https://argonaut-base-network-pulse.vercel.app>
 
-Buy through PayanAgent for `$0.02`: <https://payanagent.com/x402/kh70xt1w9y755zse4ersz2xfkh8bvkqr>
+Buy through PayanAgent for `$0.01`: <https://payanagent.com/x402/kh70xt1w9y755zse4ersz2xfkh8bvkqr>
 
 The paid `GET` and `POST /api/v1/pulse` routes query two independent RPC sources and return:
 
@@ -22,7 +22,7 @@ The service checks Base RPC availability before issuing the payment challenge. I
 
 The route costs `$0.009` USDC on Base through x402. Free discovery lives at `/`, `/health`, `/openapi.json`, `/.well-known/x402`, and `/llms.txt`.
 
-A fifteen-minute Base monitor attributes only confirmed external 9,000-atomic-unit direct payments and 20,000-atomic-unit PayanAgent relay payments to product revenue. Other amounts, ordinary transfers, self-payments, and duplicate transactions are excluded. The relay uses a distinct whole-cent price because PayanAgent's current update API rejects documented sub-cent metadata.
+A fifteen-minute Base monitor attributes confirmed external 9,000-atomic-unit direct payments and exact-offer 10,000-atomic-unit PayanAgent relay payments to product revenue. One-cent transfers require the matching public, confirmed, delivered marketplace receipt so they cannot collide with another ArgonautWorks product. Other amounts, ordinary transfers, self-payments, and duplicate transactions are excluded.
 
 ## Local verification
 
