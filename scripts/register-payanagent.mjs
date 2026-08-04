@@ -15,10 +15,10 @@ async function persistState() {
 }
 
 const offerPayload = {
-  title: "Base ETH + Network Pulse — price, DEX, gas, blocks",
+  title: "Base ETH + DEX Market Pulse — gas and block consensus",
   description: "Reliable live Base mainnet market and network telemetry: Coinbase ETH/USD, deepest Base WETH-stablecoin DEX pool price/liquidity/volume/activity, cross-source premium, block consensus, source latency, gas price, base fee, and priority-fee percentiles. Base RPCs are checked before payment; total network-source failure returns an uncharged 503.",
   category: "Blockchain",
-  tags: ["base", "eth-price", "dex", "gas", "block-metrics", "live-data"],
+  tags: ["base", "eth-price", "dex", "market-data", "gas", "block-metrics"],
   // Keep relay settlements distinct from the existing one-cent product while
   // PayanAgent's live update API rejects its documented sub-cent metadata.
   priceCents: 2,
